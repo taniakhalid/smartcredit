@@ -609,9 +609,16 @@ transform:translateX(120vw);
 # LOAD MODEL
 # -------------------------------------------------
 
-saved_data = pickle.load(open("/Users/taniakhalid/SmartCredit/models/credit_risk_model.pkl","rb"))
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+model_path = os.path.join(BASE_DIR, "models", "credit_risk_model.pkl")
+
+saved_data = pickle.load(open(model_path, "rb"))
 model = saved_data["model"]
 feature_names = saved_data["features"]
+
+
 
 # -------------------------------------------------
 # SIDEBAR
