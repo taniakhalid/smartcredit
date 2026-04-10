@@ -927,7 +927,6 @@ elif page == "Portfolio Analytics":
 
         if uploaded_file.name.endswith(".csv"):
             portfolio = pd.read_csv(uploaded_file)
-
         else:
             portfolio = pd.read_excel(uploaded_file)
 
@@ -944,46 +943,45 @@ elif page == "Portfolio Analytics":
             "Duration": np.random.randint(6,72,300)
         })
 
-    # scatter risk visualization
-        numeric_cols = portfolio.select_dtypes(include=np.number).columns
+    # ---------------- SCATTER PLOT ----------------
+    numeric_cols = portfolio.select_dtypes(include=np.number).columns
 
-        if len(numeric_cols) >= 2:
-         fig = px.scatter(
+    if len(numeric_cols) >= 2:
+        fig = px.scatter(
+            portfolio,
+            x=numeric_cols[0],
+            y=numeric_cols[1],
+            color=numeric_cols[2] if len(numeric_cols) > 2 else None,
+            color_continuous_scale="Blues"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Not enough numeric columns for visualization")
+
+    # ---------------- CORRELATION ----------------
+    st.subheader("Portfolio Correlation Matrix")
+
+    corr = portfolio.select_dtypes(include=np.number).corr()
+
+    fig = px.imshow(
+        corr,
+        color_continuous_scale="Blues",
+        text_auto=True
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ---------------- HEATMAP ----------------
+    fig = px.density_heatmap(
         portfolio,
         x=numeric_cols[0],
         y=numeric_cols[1],
-        color=numeric_cols[2] if len(numeric_cols) > 2 else None,
-        color_continuous_scale="Blues"
-    )
-
-         st.plotly_chart(fig, use_container_width=True)
-        else:
-         st.warning("Not enough numeric columns for visualization")
-         st.plotly_chart(fig,use_container_width=True)
-         st.subheader("Portfolio Correlation Matrix")
-
-        corr = portfolio.select_dtypes(include=np.number).corr()
-
-        fig = px.imshow(
-        corr,
-    color_continuous_scale="Blues",
-    text_auto=True
-)
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    # heatmap
-        fig = px.density_heatmap(
-        portfolio,
-        x="LoanSize",
-        y="RiskScore",
         nbinsx=20,
         nbinsy=20,
         color_continuous_scale="Blues"
     )
 
-    st.plotly_chart(fig,use_container_width=True)
-
+    st.plotly_chart(fig, use_container_width=True)
 # -------------------------------------------------
 # AI ASSISTANT
 # -------------------------------------------------
