@@ -770,7 +770,7 @@ elif page == "Credit Risk Prediction":
             stress_factor = 1.5
 
         adjusted_probability = min(probability*stress_factor,1)
-        risk_score = adjusted_probability*100
+        risk_score = adjusted_probability*100*0.6
         credit_score = int(850-risk_score*5.5)
 
         col1,col2,col3 = st.columns(3)
@@ -825,7 +825,7 @@ elif page == "Credit Risk Prediction":
 
         if risk_score < 30:
             st.success("Low Risk – Loan Approved")
-        elif risk_score < approval_threshold:
+        elif risk_score < 75:
             st.warning("Medium Risk – Manual Review")
         else:
             st.error("High Risk – Loan Rejected")
