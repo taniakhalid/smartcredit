@@ -887,6 +887,20 @@ elif page == "Portfolio Analytics":
         c1, c2 = st.columns(2)
         c1.metric("Average Risk", round(df["default_probability"].mean(), 2))
         c2.metric("High Risk Loans", len(high_risk))
+def categorize(p):
+    if p < 0.3:
+        return "Low Risk"
+    elif p < 0.6:
+        return "Medium Risk"
+    else:
+        return "High Risk"
+
+df["category"] = df["default_probability"].apply(categorize)
+
+st.subheader("Portfolio Segmentation")
+st.plotly_chart(
+    px.pie(df, names="category")
+)
 
 
 # -------------------------------------------------
