@@ -856,7 +856,7 @@ elif page == "Portfolio Analytics":
     st.title("Loan Portfolio Analytics")
 
     uploaded_file = st.file_uploader(
-        "Upload Portfolio File (German Credit Dataset)",
+        "Upload Portfolio File (CSV or Excel)",
         type=["csv", "xlsx"]
     )
 
@@ -874,78 +874,105 @@ elif page == "Portfolio Analytics":
         st.dataframe(df.head())
 
         # ---------------------------
-        # CREATE MODEL INPUT
+        # CLEAN COLUMN NAMES
         # ---------------------------
-        data = pd.DataFrame({col:[0]*len(df) for col in feature_names})
+        df.columns = df.columns.str.strip().str.lower()
 
-        # Map dataset columns → model features
-        data["age"] = df["age"]
-        data["credit_amount"] = df["credit_amount"]
-        data["month_duration"] = df["duration"]
-        data["payment_to_income_ratio"] = df["duration"] / df["credit_amount"]
+        st.write("Detected Columns:", df.columns)
 
         # ---------------------------
-        # PREDICT
+        # FLEXIBLE COLUMN MAPPING
         # ---------------------------
-        df["default_probability"] = model.predict_proba(data)[:,1]
+        def find_col(possible_names):
+            for name in possible_names:
+                if name in df.columns:
+                    return name
+            return None
 
-        # ---------------------------
-        # PORTFOLIO SUMMARY
-        # ---------------------------
-        st.subheader("Portfolio Summary")
-
-        total_loans = df["credit_amount"].sum()
-        avg_risk = df["default_probability"].mean()
-
-        col1, col2 = st.columns(2)
-        col1.metric("Total Loan Amount", f"{total_loans:,.0f}")
-        col2.metric("Average Risk", f"{avg_risk:.2%}")
+        age_col = find_col(["age"])
+        amount_col = find_col(["credit_amount", "credit amount"])
+        duration_col = find_col(["duration", "month_duration"])
 
         # ---------------------------
-        # RISK HISTOGRAM
+        # ERROR IF MISSING
         # ---------------------------
-        st.subheader("Risk Score Distribution")
+        if not age_col or not amount_col or not duration_col:
+            st.error("Required columns not found. Please check dataset.")
+        else:
 
-        df["risk_score"] = df["default_probability"] * 100
+            # ---------------------------
+            # CREATE MODEL INPUT
+            # ---------------------------
+            data = pd.DataFrame({col:[0]*len(df) for col in feature_names})
 
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        ax.hist(df["risk_score"], bins=20)
-        st.pyplot(fig)
+            data["age"] = df[age_col]
+            data["credit_amount"] = df[amount_col]
+            data["month_duration"] = df[duration_col]
 
-        # ---------------------------
-        # SCATTER
-        # ---------------------------
-        import plotly.express as px
+            # simple ratio (safe)
+            data["payment_to_income_ratio"] = (
+                df[duration_col] / df[amount_col]
+            )
 
-        st.subheader("Loan Amount vs Risk")
+            # ---------------------------
+            # PREDICT
+            # ---------------------------
+            df["default_probability"] = model.predict_proba(data)[:,1]
 
-        fig = px.scatter(
-            df,
-            x="credit_amount",
-            y="default_probability",
-            color="default_probability"
-        )
-        st.plotly_chart(fig)
+            # ---------------------------
+            # SUMMARY
+            # ---------------------------
+            st.subheader("Portfolio Summary")
 
-        # ---------------------------
-        # SEGMENTATION
-        # ---------------------------
-        def categorize(p):
-            if p < 0.3:
-                return "Low Risk"
-            elif p < 0.6:
-                return "Medium Risk"
-            else:
-                return "High Risk"
+            total_loans = df[amount_col].sum()
+            avg_risk = df["default_probability"].mean()
 
-        df["category"] = df["default_probability"].apply(categorize)
+            col1, col2 = st.columns(2)
+            col1.metric("Total Loan Amount", f"{total_loans:,.0f}")
+            col2.metric("Average Risk", f"{avg_risk:.2%}")
 
-        st.subheader("Portfolio Segmentation")
+            # ---------------------------
+            # HISTOGRAM
+            # ---------------------------
+            st.subheader("Risk Distribution")
 
-        fig = px.pie(df, names="category")
-        st.plotly_chart(fig)
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+            ax.hist(df["default_probability"], bins=20)
+            st.pyplot(fig)
 
+            # ---------------------------
+            # SCATTER
+            # ---------------------------
+            import plotly.express as px
+
+            st.subheader("Loan Amount vs Risk")
+
+            fig = px.scatter(
+                df,
+                x=amount_col,
+                y="default_probability",
+                color="default_probability"
+            )
+            st.plotly_chart(fig)
+
+            # ---------------------------
+            # SEGMENTATION
+            # ---------------------------
+            def categorize(p):
+                if p < 0.3:
+                    return "Low Risk"
+                elif p < 0.6:
+                    return "Medium Risk"
+                else:
+                    return "High Risk"
+
+            df["category"] = df["default_probability"].apply(categorize)
+
+            st.subheader("Portfolio Segmentation")
+
+            fig = px.pie(df, names="category")
+            st.plotly_chart(fig)
 # -------------------------------------------------
 # LOAN SIMULATOR (FIXED)
 # -------------------------------------------------
