@@ -877,54 +877,43 @@ elif page == "Portfolio Analytics":
         # CLEAN COLUMN NAMES
         # ---------------------------
         df.columns = df.columns.str.strip().str.lower()
-
         st.write("Detected Columns:", df.columns)
 
         # ---------------------------
-        # FLEXIBLE COLUMN MAPPING
+        # REQUIRED COLUMNS CHECK
         # ---------------------------
-        def find_col(possible_names):
-            for name in possible_names:
-                if name in df.columns:
-                    return name
-            return None
+        required_cols = ["age", "loanamount", "loandurationmonths"]
 
-        age_col = find_col(["age"])
-        amount_col = find_col(["credit_amount", "credit amount"])
-        duration_col = find_col(["duration", "month_duration"])
-
-        # ---------------------------
-        # ERROR IF MISSING
-        # ---------------------------
-        if not age_col or not amount_col or not duration_col:
-            st.error("Required columns not found. Please check dataset.")
+        if not all(col in df.columns for col in required_cols):
+            st.error("Dataset must contain: age, loanamount, loandurationmonths")
         else:
 
             # ---------------------------
             # CREATE MODEL INPUT
             # ---------------------------
-            data = pd.DataFrame({col:[0]*len(df) for col in feature_names})
+            data = pd.DataFrame({col: [0]*len(df) for col in feature_names})
 
-            data["age"] = df[age_col]
-            data["credit_amount"] = df[amount_col]
-            data["month_duration"] = df[duration_col]
+            data["age"] = df["age"]
+            data["credit_amount"] = df["loanamount"]
+            data["month_duration"] = df["loandurationmonths"]
 
-            # simple ratio (safe)
-            data["payment_to_income_ratio"] = (
-                df[duration_col] / df[amount_col]
+            # Safe ratio (avoid division by zero)
+            data["payment_to_income_ratio"] = df.get(
+                "paymenttoincomeratio",
+                df["loandurationmonths"] / (df["loanamount"] + 1)
             )
 
             # ---------------------------
-            # PREDICT
+            # MODEL PREDICTION
             # ---------------------------
-            df["default_probability"] = model.predict_proba(data)[:,1]
+            df["default_probability"] = model.predict_proba(data)[:, 1]
 
             # ---------------------------
-            # SUMMARY
+            # PORTFOLIO SUMMARY
             # ---------------------------
             st.subheader("Portfolio Summary")
 
-            total_loans = df[amount_col].sum()
+            total_loans = df["loanamount"].sum()
             avg_risk = df["default_probability"].mean()
 
             col1, col2 = st.columns(2)
@@ -942,7 +931,7 @@ elif page == "Portfolio Analytics":
             st.pyplot(fig)
 
             # ---------------------------
-            # SCATTER
+            # SCATTER PLOT
             # ---------------------------
             import plotly.express as px
 
@@ -950,9 +939,10 @@ elif page == "Portfolio Analytics":
 
             fig = px.scatter(
                 df,
-                x=amount_col,
+                x="loanamount",
                 y="default_probability",
-                color="default_probability"
+                color="default_probability",
+                title="Loan Amount vs Default Probability"
             )
             st.plotly_chart(fig)
 
@@ -971,8 +961,14 @@ elif page == "Portfolio Analytics":
 
             st.subheader("Portfolio Segmentation")
 
-            fig = px.pie(df, names="category")
+            fig = px.pie(df, names="category", title="Risk Segmentation")
             st.plotly_chart(fig)
+
+            # ---------------------------
+            # OPTIONAL: SHOW FINAL DATA
+            # ---------------------------
+            st.subheader("Final Portfolio Data")
+            st.dataframe(df)
 # -------------------------------------------------
 # LOAN SIMULATOR (FIXED)
 # -------------------------------------------------
