@@ -13,7 +13,7 @@ import time
 # ------------------------------
 import pickle
 
-saved_data = pickle.load(open("/Users/taniakhalid/SmartCredit/models/credit_risk_model.pkl", "rb"))
+saved_data = pickle.load(open("models/credit_risk_model.pkl", "rb"))
 model = saved_data["model"]
 feature_names = saved_data["features"]
 # ---------------- SESSION ----------------
