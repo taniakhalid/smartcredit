@@ -874,13 +874,13 @@ elif page == "Portfolio Analytics":
         st.dataframe(df.head())
 
         # ---------------------------
-        # CLEAN COLUMN NAMES
+        # CLEAN COLUMNS
         # ---------------------------
         df.columns = df.columns.str.strip().str.lower()
         st.write("Detected Columns:", df.columns)
 
         # ---------------------------
-        # REQUIRED COLUMNS CHECK
+        # CHECK REQUIRED COLUMNS
         # ---------------------------
         required_cols = ["age", "loanamount", "loandurationmonths"]
 
@@ -897,7 +897,6 @@ elif page == "Portfolio Analytics":
             data["credit_amount"] = df["loanamount"]
             data["month_duration"] = df["loandurationmonths"]
 
-            # Safe ratio (avoid division by zero)
             data["payment_to_income_ratio"] = df.get(
                 "paymenttoincomeratio",
                 df["loandurationmonths"] / (df["loanamount"] + 1)
@@ -909,7 +908,7 @@ elif page == "Portfolio Analytics":
             df["default_probability"] = model.predict_proba(data)[:, 1]
 
             # ---------------------------
-            # PORTFOLIO SUMMARY
+            # SUMMARY
             # ---------------------------
             st.subheader("Portfolio Summary")
 
@@ -921,34 +920,10 @@ elif page == "Portfolio Analytics":
             col2.metric("Average Risk", f"{avg_risk:.2%}")
 
             # ---------------------------
-            # HISTOGRAM
-            # ---------------------------
-            st.subheader("Risk Distribution")
-
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.hist(df["default_probability"], bins=20)
-            st.pyplot(fig)
-
-            # ---------------------------
-            # SCATTER PLOT
+            # PIE CHART ONLY
             # ---------------------------
             import plotly.express as px
 
-            st.subheader("Loan Amount vs Risk")
-
-            fig = px.scatter(
-                df,
-                x="loanamount",
-                y="default_probability",
-                color="default_probability",
-                title="Loan Amount vs Default Probability"
-            )
-            st.plotly_chart(fig)
-
-            # ---------------------------
-            # SEGMENTATION
-            # ---------------------------
             def categorize(p):
                 if p < 0.3:
                     return "Low Risk"
@@ -959,16 +934,15 @@ elif page == "Portfolio Analytics":
 
             df["category"] = df["default_probability"].apply(categorize)
 
-            st.subheader("Portfolio Segmentation")
+            st.subheader("Portfolio Risk Segmentation")
 
-            fig = px.pie(df, names="category", title="Risk Segmentation")
-            st.plotly_chart(fig)
+            fig = px.pie(
+                df,
+                names="category",
+                title="Loan Portfolio Risk Distribution"
+            )
 
-            # ---------------------------
-            # OPTIONAL: SHOW FINAL DATA
-            # ---------------------------
-            st.subheader("Final Portfolio Data")
-            st.dataframe(df)
+            st.plotly_chart(fig, use_container_width=True)
 # -------------------------------------------------
 # LOAN SIMULATOR (FIXED)
 # -------------------------------------------------
