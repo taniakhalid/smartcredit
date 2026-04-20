@@ -948,9 +948,9 @@ elif page == "Portfolio Analytics":
 # -------------------------------------------------
 elif page == "Loan Simulator":
 
-    st.title("Loan Profit Simulator")
+    st.title("💰 Loan Profit Simulator")
 
-    # User Inputs
+    # Inputs
     sim_amount = st.slider("Loan Amount", 1000, 100000, 20000, step=1000)
     sim_duration = st.slider("Duration (Months)", 6, 60, 24)
     sim_interest = st.slider("Interest Rate (%)", 5, 25, 12) / 100
@@ -958,13 +958,13 @@ elif page == "Loan Simulator":
     if st.button("Simulate Loan"):
 
         try:
-            # Create empty row using actual model features
+            # Create input row using model features
             data = pd.DataFrame(
                 np.zeros((1, len(feature_names))),
                 columns=feature_names
             )
 
-            # Fill only if columns exist
+            # Fill values only if columns exist
             if "age" in data.columns:
                 data["age"] = 30
 
@@ -977,29 +977,7 @@ elif page == "Loan Simulator":
             if "payment_to_income_ratio" in data.columns:
                 data["payment_to_income_ratio"] = 2
 
-            # Predict probability
-            prob = model.predict_proba(data)[0][1]
-
-            # Profit Calculation
-            interest_income = sim_amount * sim_interest
-            default_loss = sim_amount * 0.40
-
-            expected_profit = (
-                (1 - prob) * interest_income
-                - prob * default_loss
-            )
-
-            # Show Results
-            st.subheader("📊 Loan Result")
-            st.metric("Default Probability", f"{prob:.2%}")
-            st.metric("Expected Profit", f"₹ {expected_profit:,.2f}")
-
-            if expected_profit > 0:
-                st.success("Good Loan Opportunity")
-            else:
-                st.error("High Risk Loan")
-
-            # Graph Simulation
+            # Graph simulation
             amounts = list(range(5000, 55000, 5000))
             profits = []
 
@@ -1027,13 +1005,8 @@ elif page == "Loan Simulator":
             st.subheader("📈 Profit vs Loan Amount")
             st.line_chart(chart_df)
 
-            st.subheader("📋 Detailed Table")
-            st.dataframe(chart_df)
-
         except Exception as e:
             st.error(f"Error: {str(e)}")
-
-
 # -------------------------------------------------
 # AI LOAN ASSISTANT (FIXED)
 # -------------------------------------------------
