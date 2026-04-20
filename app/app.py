@@ -958,13 +958,13 @@ elif page == "Loan Simulator":
     if st.button("Simulate Loan"):
 
         try:
-            # Create input row using model features
+            # Create dataframe with model columns
             data = pd.DataFrame(
                 np.zeros((1, len(feature_names))),
                 columns=feature_names
             )
 
-            # Fill values only if columns exist
+            # Fill values safely
             if "age" in data.columns:
                 data["age"] = 30
 
@@ -975,9 +975,9 @@ elif page == "Loan Simulator":
                 data["month_duration"] = sim_duration
 
             if "payment_to_income_ratio" in data.columns:
-                data["payment_to_income_ratio"] = 2
+                data["payment_to_income_ratio"] = 0.35
 
-            # Graph simulation
+            # Better graph values
             amounts = list(range(5000, 55000, 5000))
             profits = []
 
@@ -990,16 +990,17 @@ elif page == "Loan Simulator":
 
                 p = model.predict_proba(temp)[0][1]
 
-                income = amt * sim_interest
-                loss = amt * 0.40
+                # improved formula
+                interest_income = amt * sim_interest * (sim_duration / 12)
+                default_loss = amt * p * 0.15
 
-                profit = ((1 - p) * income) - (p * loss)
+                profit = interest_income - default_loss
 
                 profits.append(profit)
 
             chart_df = pd.DataFrame({
                 "Loan Amount": amounts,
-                "Expected Profit": profits
+                "Profit": profits
             }).set_index("Loan Amount")
 
             st.subheader("📈 Profit vs Loan Amount")
