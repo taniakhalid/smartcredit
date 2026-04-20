@@ -971,7 +971,6 @@ elif page == "Loan Simulator":
         )
 
     
-        st.metric("Expected Profit", round(expected_profit, 2))
 
         # Graph
         amounts = range(5000, 50000, 5000)
