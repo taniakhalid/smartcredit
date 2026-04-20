@@ -970,7 +970,7 @@ elif page == "Loan Simulator":
             - (prob * sim_amount * 0.2)
         )
 
-        st.metric("Default Risk", f"{prob:.2%}")
+    
         st.metric("Expected Profit", round(expected_profit, 2))
 
         # Graph
