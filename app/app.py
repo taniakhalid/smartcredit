@@ -948,7 +948,7 @@ elif page == "Portfolio Analytics":
 # -------------------------------------------------
 elif page == "Loan Simulator":
 
-    st.title("💰 Loan Profit Simulator")
+    st.title("Loan Profit Simulator")
 
     # Inputs
     sim_amount = st.slider("Loan Amount", 1000, 100000, 20000, step=1000)
@@ -1003,7 +1003,7 @@ elif page == "Loan Simulator":
                 "Profit": profits
             }).set_index("Loan Amount")
 
-            st.subheader("📈 Profit vs Loan Amount")
+            st.subheader(" Profit vs Loan Amount")
             st.line_chart(chart_df)
 
         except Exception as e:
