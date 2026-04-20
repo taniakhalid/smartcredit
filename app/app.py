@@ -950,39 +950,88 @@ elif page == "Loan Simulator":
 
     st.title("Loan Profit Simulator")
 
-    sim_amount = st.slider("Loan Amount", 1000, 100000, 20000)
-    sim_duration = st.slider("Duration", 6, 60, 24)
-    sim_interest = st.slider("Interest Rate", 5, 25, 12) / 100
+    # User Inputs
+    sim_amount = st.slider("Loan Amount", 1000, 100000, 20000, step=1000)
+    sim_duration = st.slider("Duration (Months)", 6, 60, 24)
+    sim_interest = st.slider("Interest Rate (%)", 5, 25, 12) / 100
 
     if st.button("Simulate Loan"):
 
-        data = pd.DataFrame({col:[0] for col in feature_names})
+        try:
+            # Create empty row using actual model features
+            data = pd.DataFrame(
+                np.zeros((1, len(feature_names))),
+                columns=feature_names
+            )
 
-        data["age"] = 30
-        data["credit_amount"] = sim_amount
-        data["month_duration"] = sim_duration
-        data["payment_to_income_ratio"] = 2
+            # Fill only if columns exist
+            if "age" in data.columns:
+                data["age"] = 30
 
-        prob = model.predict_proba(data)[0][1]
+            if "credit_amount" in data.columns:
+                data["credit_amount"] = sim_amount
 
-        expected_profit = (
-            (1 - prob) * (sim_amount * sim_interest)
-            - (prob * sim_amount * 0.2)
-        )
+            if "month_duration" in data.columns:
+                data["month_duration"] = sim_duration
 
-    
+            if "payment_to_income_ratio" in data.columns:
+                data["payment_to_income_ratio"] = 2
 
-        # Graph
-        amounts = range(5000, 50000, 5000)
-        profits = []
+            # Predict probability
+            prob = model.predict_proba(data)[0][1]
 
-        for amt in amounts:
-            data["credit_amount"] = amt
-            p = model.predict_proba(data)[0][1]
-            profit = (1 - p) * (amt * sim_interest) - (p * amt * 0.2)
-            profits.append(profit)
+            # Profit Calculation
+            interest_income = sim_amount * sim_interest
+            default_loss = sim_amount * 0.40
 
-        st.line_chart(profits)
+            expected_profit = (
+                (1 - prob) * interest_income
+                - prob * default_loss
+            )
+
+            # Show Results
+            st.subheader("📊 Loan Result")
+            st.metric("Default Probability", f"{prob:.2%}")
+            st.metric("Expected Profit", f"₹ {expected_profit:,.2f}")
+
+            if expected_profit > 0:
+                st.success("Good Loan Opportunity")
+            else:
+                st.error("High Risk Loan")
+
+            # Graph Simulation
+            amounts = list(range(5000, 55000, 5000))
+            profits = []
+
+            for amt in amounts:
+
+                temp = data.copy()
+
+                if "credit_amount" in temp.columns:
+                    temp["credit_amount"] = amt
+
+                p = model.predict_proba(temp)[0][1]
+
+                income = amt * sim_interest
+                loss = amt * 0.40
+
+                profit = ((1 - p) * income) - (p * loss)
+
+                profits.append(profit)
+
+            chart_df = pd.DataFrame({
+                "Loan Amount": amounts,
+                "Expected Profit": profits
+            }).set_index("Loan Amount")
+
+            st.subheader("📈 Profit vs Loan Amount")
+            st.line_chart(chart_df)
+
+            st.subheader("📋 Detailed Table")
+            st.dataframe(chart_df)
+
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
 
 # -------------------------------------------------
