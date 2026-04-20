@@ -853,7 +853,7 @@ elif page == "Credit Risk Prediction":
 # -------------------------------------------------
 elif page == "Portfolio Analytics":
 
-    st.title("Loan Portfolio Analytics")
+    st.title("📊 Loan Portfolio Analytics")
 
     uploaded_file = st.file_uploader(
         "Upload Portfolio File (CSV or Excel)",
@@ -862,50 +862,86 @@ elif page == "Portfolio Analytics":
 
     if uploaded_file:
 
-        # ---------------------------
-        # READ FILE
-        # ---------------------------
-        if uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
-
-        st.subheader("Data Preview")
-        st.dataframe(df.head())
-
-        # ---------------------------
-        # CLEAN COLUMNS
-        # ---------------------------
-        df.columns = df.columns.str.strip().str.lower()
-        st.write("Detected Columns:", df.columns)
-
-        # ---------------------------
-        # CHECK REQUIRED COLUMNS
-        # ---------------------------
-        required_cols = ["age", "loanamount", "loandurationmonths"]
-
-        if not all(col in df.columns for col in required_cols):
-            st.error("Dataset must contain: age, loanamount, loandurationmonths")
-        else:
+        try:
+            # ---------------------------
+            # READ FILE
+            # ---------------------------
+            if uploaded_file.name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
 
             # ---------------------------
-            # CREATE MODEL INPUT
+            # CLEAN COLUMNS
             # ---------------------------
-            data = pd.DataFrame({col: [0]*len(df) for col in feature_names})
-
-            data["age"] = df["age"]
-            data["credit_amount"] = df["loanamount"]
-            data["month_duration"] = df["loandurationmonths"]
-
-            data["payment_to_income_ratio"] = df.get(
-                "paymenttoincomeratio",
-                df["loandurationmonths"] / (df["loanamount"] + 1)
+            df.columns = (
+                df.columns.str.strip()
+                .str.lower()
+                .str.replace(" ", "", regex=False)
+                .str.replace("_", "", regex=False)
             )
 
             # ---------------------------
-            # MODEL PREDICTION
+            # COLUMN MAPPING
+            # ---------------------------
+            rename_map = {
+                "loan_amount": "loanamount",
+                "loanamount": "loanamount",
+                "loan_duration": "loandurationmonths",
+                "loan_duration_months": "loandurationmonths",
+                "loandurationmonths": "loandurationmonths",
+                "payment_to_income_ratio": "paymenttoincomeratio",
+                "credit_score": "creditscore",
+                "customer_id": "customerid"
+            }
+
+            df.rename(columns=rename_map, inplace=True)
+
+            st.subheader("📄 Data Preview")
+            st.dataframe(df.head())
+
+            # ---------------------------
+            # REQUIRED COLUMNS
+            # ---------------------------
+            required_cols = ["age", "loanamount", "loandurationmonths"]
+
+            missing = [col for col in required_cols if col not in df.columns]
+
+            if missing:
+                st.error(f"Missing required columns: {missing}")
+                st.stop()
+
+            # ---------------------------
+            # MODEL INPUT (REAL VALUES)
+            # ---------------------------
+            data = pd.DataFrame(
+                np.zeros((len(df), len(feature_names))),
+                columns=feature_names
+            )
+
+            if "age" in data.columns:
+                data["age"] = df["age"]
+
+            if "credit_amount" in data.columns:
+                data["credit_amount"] = df["loanamount"]
+
+            if "month_duration" in data.columns:
+                data["month_duration"] = df["loandurationmonths"]
+
+            if "payment_to_income_ratio" in data.columns:
+
+                if "paymenttoincomeratio" in df.columns:
+                    data["payment_to_income_ratio"] = df["paymenttoincomeratio"]
+                else:
+                    data["payment_to_income_ratio"] = (
+                        df["loanamount"] / (df["age"] * 1000)
+                    ).clip(0.05, 1.5)
+
+            # ---------------------------
+            # REAL MODEL PREDICTION
             # ---------------------------
             df["default_probability"] = model.predict_proba(data)[:, 1]
+            df["risk_score"] = (df["default_probability"] * 100).round(2)
 
             # ---------------------------
             # SUMMARY
@@ -913,36 +949,66 @@ elif page == "Portfolio Analytics":
             st.subheader("Portfolio Summary")
 
             total_loans = df["loanamount"].sum()
-            avg_risk = df["default_probability"].mean()
+            avg_risk = df["risk_score"].mean()
 
             col1, col2 = st.columns(2)
-            col1.metric("Total Loan Amount", f"{total_loans:,.0f}")
-            col2.metric("Average Risk", f"{avg_risk:.2%}")
+
+            col1.metric("Total Loan Amount", f"₹ {total_loans:,.0f}")
+            col2.metric("Average Risk", f"{avg_risk:.2f}%")
 
             # ---------------------------
-            # PIE CHART ONLY
+            # REAL RISK CATEGORY
             # ---------------------------
-            import plotly.express as px
-
             def categorize(p):
-                if p < 0.3:
+                if p < 0.30:
                     return "Low Risk"
-                elif p < 0.6:
+                elif p < 0.60:
                     return "Medium Risk"
                 else:
                     return "High Risk"
 
             df["category"] = df["default_probability"].apply(categorize)
 
+            # ---------------------------
+            # PIE CHART
+            # ---------------------------
+            import plotly.express as px
+
             st.subheader("Portfolio Risk Segmentation")
 
             fig = px.pie(
                 df,
                 names="category",
-                title="Loan Portfolio Risk Distribution"
+                title="Loan Portfolio Risk Distribution",
+                hole=0.35
             )
 
             st.plotly_chart(fig, use_container_width=True)
+
+            # ---------------------------
+            # TOP RISK CUSTOMERS
+            # ---------------------------
+            st.subheader("Highest Risk Loans")
+
+            show_cols = [
+                col for col in [
+                    "customerid",
+                    "age",
+                    "loanamount",
+                    "loandurationmonths",
+                    "risk_score"
+                ] if col in df.columns
+            ]
+
+            st.dataframe(
+                df.sort_values(
+                    "risk_score",
+                    ascending=False
+                )[show_cols].head(10)
+            )
+
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 # -------------------------------------------------
 # LOAN SIMULATOR (FIXED)
 # -------------------------------------------------
