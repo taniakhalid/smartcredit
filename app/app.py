@@ -1003,7 +1003,7 @@ elif page == "Loan Simulator":
                 "Profit": profits
             }).set_index("Loan Amount")
 
-            st.subheader(" Profit vs Loan Amount")
+            st.subheader("Expected Profit vs Loan Amount")
             st.line_chart(chart_df)
 
         except Exception as e:
