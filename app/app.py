@@ -853,7 +853,7 @@ elif page == "Credit Risk Prediction":
 # -------------------------------------------------
 elif page == "Portfolio Analytics":
 
-    st.title("📊 Loan Portfolio Analytics")
+    st.title("Loan Portfolio Analytics")
 
     uploaded_file = st.file_uploader(
         "Upload Portfolio File (CSV or Excel)",
@@ -897,7 +897,7 @@ elif page == "Portfolio Analytics":
 
             df.rename(columns=rename_map, inplace=True)
 
-            st.subheader("📄 Data Preview")
+            st.subheader("Data Preview")
             st.dataframe(df.head())
 
             # ---------------------------
