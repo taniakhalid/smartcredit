@@ -610,9 +610,11 @@ transform:translateX(120vw);
 <div class="tx-stream" style="top:80%;animation-duration:19s;">$1200.00 → FRAUD SCAN</div>
 
 """, unsafe_allow_html=True)
+  
 # -------------------------------------------------
 # LOAD MODEL
-# -------------------------------------------------
+# ------------------------------------------------
+
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -737,113 +739,279 @@ elif page == "Credit Risk Prediction":
     col1, col2 = st.columns(2)
 
     with col1:
-        age = st.slider("Age", 18, 75, 30)
-        loan_amount = st.number_input("Loan Amount", 500, 1000000, 50000)
-        duration = st.slider("Loan Duration", 6, 72, 24)
-        income_ratio = st.slider("Payment to Income Ratio", 1, 5, 2)
+
+        age = st.slider(
+            "Age",
+            18,
+            75,
+            30
+        )
+
+        loan_amount = st.number_input(
+            "Loan Amount",
+            500,
+            1000000,
+            50000
+        )
+
+        duration = st.slider(
+            "Loan Duration",
+            6,
+            72,
+            24
+        )
+
+        income_ratio = st.slider(
+            "Payment to Income Ratio",
+            0.1,
+            1.0,
+            0.3,
+            0.05
+        )
 
     with col2:
-        approval_threshold = st.slider("Approval Threshold", 0, 100, 60)
-        interest_rate = st.slider("Interest Rate", 5, 30, 15) / 100
+
+        approval_threshold = st.slider(
+            "Approval Threshold",
+            0,
+            100,
+            60
+        )
+
+        interest_rate = (
+            st.slider(
+                "Interest Rate",
+                5,
+                30,
+                15
+            ) / 100
+        )
+
         scenario = st.selectbox(
             "Macroeconomic Condition",
-            ["Normal Economy", "Mild Recession", "Severe Recession"]
+            [
+                "Normal Economy",
+                "Mild Recession",
+                "Severe Recession"
+            ]
         )
+
+    # -------------------------------------------------
+    # RUN ANALYSIS
+    # -------------------------------------------------
 
     if st.button("Run Credit Risk Analysis"):
 
-        # ---------- MODEL PREDICTION ----------
-        data = pd.DataFrame({col:[0] for col in feature_names})
+        # ---------- MODEL INPUT ----------
+        data = pd.DataFrame(
+            {col: [0] for col in feature_names}
+        )
 
         data["age"] = age
         data["credit_amount"] = loan_amount
         data["month_duration"] = duration
         data["payment_to_income_ratio"] = income_ratio
 
-        prob = model.predict_proba(data)[0][1]
+        # ---------- REAL MODEL PREDICTION ----------
+        default_probability = model.predict_proba(data)[0][1]
 
-        # ---------- YOUR LOGIC (UNCHANGED) ----------
-        prob = prob * 0.7
-        risk_score = prob * 85 + 10
-
-        credit_score = int(850 - risk_score * 3)
-        credit_score = max(300, min(850, credit_score))
-
-        stress_factor = 1
+        # ---------- ECONOMIC CONDITION IMPACT ----------
         if scenario == "Mild Recession":
-            stress_factor = 1.2
-        elif scenario == "Severe Recession":
-            stress_factor = 1.5
 
-        adjusted_probability = min(prob * stress_factor, 1)
+            default_probability *= 1.10
+
+        elif scenario == "Severe Recession":
+
+            default_probability *= 1.25
+
+        default_probability = min(
+            default_probability,
+            1
+        )
+
+        # ---------- RISK SCORE ----------
+        risk_score = round(
+            default_probability * 100,
+            2
+        )
+
+        # ---------- CREDIT SCORE ----------
+        credit_score = int(
+            850 - (default_probability * 550)
+        )
+
+        credit_score = max(
+            300,
+            min(850, credit_score)
+        )
 
         # ---------- METRICS ----------
         c1, c2, c3 = st.columns(3)
-        c1.metric("Default Probability", f"{adjusted_probability:.2%}")
-        c2.metric("Risk Score", round(risk_score, 2))
-        c3.metric("Credit Score", credit_score)
 
-        # ---------- PROFIT ----------
+        c1.metric(
+            "Default Probability",
+            f"{default_probability:.2%}"
+        )
+
+        c2.metric(
+            "Risk Score",
+            risk_score
+        )
+
+        c3.metric(
+            "Credit Score",
+            credit_score
+        )
+
+        # ---------- EXPECTED PROFIT ----------
         expected_profit = (
-            (1 - adjusted_probability) * (loan_amount * interest_rate)
-            - (adjusted_probability * loan_amount * 0.2)
+            (1 - default_probability)
+            * (loan_amount * interest_rate)
+            - (
+                default_probability
+                * loan_amount
+                * 0.25
+            )
         )
 
         st.subheader("Expected Profit")
-        st.write(round(expected_profit, 2))
+
+        st.write(
+            round(expected_profit, 2)
+        )
 
         # ---------- DECISION ----------
         st.subheader("Loan Decision")
 
-        if adjusted_probability < 0.4:
-            st.success("Low Risk – Loan Approved")
-        elif adjusted_probability < 0.6:
-            st.warning("Medium Risk – Manual Review")
-        else:
-            st.error("High Risk – Loan Rejected")
+        if default_probability < 0.35:
 
-        # ---------- GRAPHS ----------
+            st.success(
+                "Low Risk – Loan Approved"
+            )
+
+        elif default_probability < 0.60:
+
+            st.warning(
+                "Medium Risk – Manual Review"
+            )
+
+        else:
+
+            st.error(
+                "High Risk – Loan Rejected"
+            )
+
+        # ---------- RISK BREAKDOWN ----------
         st.subheader("Risk Breakdown")
 
         chart_data = pd.DataFrame({
-            "Metric": ["Default Risk", "Safe Probability"],
-            "Value": [adjusted_probability, 1 - adjusted_probability]
+
+            "Metric": [
+                "Default Risk",
+                "Safe Probability"
+            ],
+
+            "Value": [
+                default_probability,
+                1 - default_probability
+            ]
         })
 
-        st.bar_chart(chart_data.set_index("Metric"))
+        st.bar_chart(
+            chart_data.set_index("Metric")
+        )
 
-        # Profit curve
+        # ---------- PROFIT VS RISK ----------
         st.subheader("Profit vs Risk")
 
-        probs = [i/100 for i in range(10, 90, 5)]
+        probs = [
+            i / 100
+            for i in range(10, 90, 5)
+        ]
+
         profits = []
 
         for p in probs:
-            profit = (1 - p) * (loan_amount * interest_rate) - (p * loan_amount * 0.2)
+
+            profit = (
+                (1 - p)
+                * (loan_amount * interest_rate)
+                - (
+                    p
+                    * loan_amount
+                    * 0.25
+                )
+            )
+
             profits.append(profit)
 
-        chart_df = pd.DataFrame({"Risk": probs, "Profit": profits})
-        st.line_chart(chart_df.set_index("Risk"))
+        chart_df = pd.DataFrame({
+            "Risk": probs,
+            "Profit": profits
+        })
 
-        # Radar
+        st.line_chart(
+            chart_df.set_index("Risk")
+        )
+
+        # ---------- RADAR CHART ----------
         st.subheader("Borrower Profile")
 
-        categories = ["Age", "Loan", "Duration", "Income"]
-        values = [age/75, loan_amount/1000000, duration/72, income_ratio/5]
+        categories = [
+            "Age",
+            "Loan",
+            "Duration",
+            "Income Ratio"
+        ]
+
+        values = [
+            age / 75,
+            loan_amount / 1000000,
+            duration / 72,
+            income_ratio
+        ]
 
         fig = go.Figure()
-        fig.add_trace(go.Scatterpolar(r=values, theta=categories, fill="toself"))
-        st.plotly_chart(fig, use_container_width=True)
+
+        fig.add_trace(
+            go.Scatterpolar(
+                r=values,
+                theta=categories,
+                fill="toself"
+            )
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
         # ---------- AI EXPLANATION ----------
         st.subheader("AI Explanation")
 
-        if adjusted_probability < 0.4:
-            explanation = "Low default risk. Borrower has strong repayment ability."
-        elif adjusted_probability < 0.6:
-            explanation = "Moderate risk. Loan should be reviewed carefully."
+        if default_probability < 0.35:
+
+            explanation = (
+                "The borrower has low predicted "
+                "default probability and strong "
+                "repayment capability."
+            )
+
+        elif default_probability < 0.60:
+
+            explanation = (
+                "The borrower falls into a "
+                "moderate-risk category and "
+                "requires manual verification."
+            )
+
         else:
-            explanation = "High risk. Loan likely to default based on financial indicators."
+
+            explanation = (
+                "The borrower has high predicted "
+                "default probability and may "
+                "face repayment difficulties."
+            )
 
         st.info(explanation)
 
